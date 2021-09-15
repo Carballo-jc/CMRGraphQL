@@ -13,7 +13,7 @@ const typeDefs = gql`
   type Product {
     id: ID
     name: String
-    existence: Int
+    stock: Int
     price: Float
     create: String
   }
@@ -29,6 +29,21 @@ const typeDefs = gql`
     phone: String
     seller: ID
   }
+  type Order {
+    id:ID
+    order:[OrderGroup]
+    total: Float
+    client:ID
+    seller:ID
+    date:String
+    status: StatusOrder
+  }
+  type OrderGroup {
+        id: ID
+        cuantity: Int
+        name: String
+        price: Float
+  }
   #Inputs
   input UserInput {
     name: String!
@@ -42,7 +57,7 @@ const typeDefs = gql`
   }
   input ProductInput {
     name: String!
-    existence: Int!
+    stock: Int!
     price: Float!
   }
   input ClientInput {
@@ -51,6 +66,23 @@ const typeDefs = gql`
     email: String!
     company: String!
     phone: String
+  }
+  input OrderProductInput {
+        id: ID
+        cuantity: Int
+        name: String
+        price: Float
+  }
+  input OrderInput {
+    order: [OrderProductInput]
+    total: Float!
+    client:ID!
+    status:StatusOrder
+  }
+  enum StatusOrder {
+    PENDIENTE
+    COMPLETADO
+    CANCELADO
   }
 
   #Mutation
@@ -68,6 +100,8 @@ const typeDefs = gql`
     newClient(input: ClientInput): Client
     updateClient(id: ID!, input: ClientInput): Client
     deleteClient(id: ID!): String
+    #Oder
+    newOrder(input: OrderInput): Order
   }
   #Querys
   type Query {

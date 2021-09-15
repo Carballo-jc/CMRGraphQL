@@ -12,14 +12,14 @@ const OrderSchema = mongoose.Schema({
   client: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    ref: "Cliente",
+    ref: "Client",
   },
   seller: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
-    ref: "Usuario",
+    ref: "User",
   },
-  state: {
+  status: {
     type: String,
     default: "PENDIENTE",
   },

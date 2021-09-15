@@ -1,10 +1,10 @@
+require("dotenv").config({ path: ".env" });
 const { ApolloServer } = require("apollo-server");
 const typeDefs = require("./db/schema");
 const resolvers = require("./db/resolvers");
 const conecteDB = require("./config/db-config");
 const jwt = require("jsonwebtoken");
-require("dotenv").config({ path: "variables.env" });
-
+const {SECRETKEY} = process.env
 //coneccion
 conecteDB();
 
@@ -17,7 +17,7 @@ const server = new ApolloServer({
     const token = req.headers["authorization"] || "";
     if (token) {
       try {
-        const user = jwt.verify(token, process.env.SECRET);
+        const user = jwt.verify(token, SECRETKEY);
         // console.log(user);
         return {
           user,

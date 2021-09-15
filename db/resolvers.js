@@ -1,32 +1,29 @@
-const Users = require("../models/Users");
-const Products = require("../models/Products");
-const Clients = require("../models/Clients");
+require("dotenv").config({ path: ".env" });
+const User = require("../models/User");
+const Product = require("../models/Product");
+const Client = require("../models/Client");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-require("dotenv").config({ path: "variables.env" });
+const { generarJWT } = require("../helpers/generar-jwt");
+const {SECRETKEY} = process.env
 
-const createToken = (user, secret, expiresIn) => {
-  console.log(user);
-  const { id, name, email, lastName } = user;
-  return jwt.sign({ id, name, email, lastName }, secret, { expiresIn });
-};
 //resolver
 const resolvers = {
   Query: {
     getUser: async (_, { token }) => {
-      const userId = await jwt.verify(token, process.env.SECRET);
+      const userId = await jwt.verify(token, SECRETKEY);
       return userId;
     },
     getProducts: async () => {
       try {
-        const products = await Products.find({});
+        const products = await Product.find({});
         return products;
       } catch (error) {
         console.log(error);
       }
     },
     getProduct: async (_, { id }) => {
-      const product = await Products.findById(id);
+      const product = await Product.findById(id);
       if (!product) {
         throw new Error("Producto no Encontrado");
       }
@@ -34,14 +31,14 @@ const resolvers = {
     },
     getClients: async () => {
       try {
-        const clients = await Clients.find({});
+        const clients = await Client.find({});
         return clients;
       } catch (error) {
         console.log(error);
       }
     },
     getClient: async (_, { id }, ctx) => {
-      const client = await Clients.findById(id);
+      const client = await Client.findById(id);
       //revisar si el cliente no existe
       if (!client) {
         throw new Error("Cliente no encontrado");
@@ -54,7 +51,7 @@ const resolvers = {
     },
     getClientSeller: async (_, {}, ctx) => {
       try {
-        const clients = await Clients.find({ seller: ctx.user.id.toString() });
+        const clients = await Client.find({ seller: ctx.user.id.toString() });
         return clients;
       } catch (error) {
         console.log(error);
@@ -64,10 +61,10 @@ const resolvers = {
   Mutation: {
     newUser: async (_, { input }) => {
       const { email, password } = input;
-      console.log(input);
+
       //revisa si el usuario ya existe
-      const userFind = await Users.findOne({ email });
-      if (userFind) {
+      const user = await User.findOne({ email });
+      if (user) {
         throw new Error("El usuario ya esta Registrado");
       }
 
@@ -76,9 +73,9 @@ const resolvers = {
 
       try {
         //guardar en la base de datos
-        const usuario = new Users(input);
-        usuario.save();
-        return usuario;
+        const user = new User(input);
+        user.save();
+        return user;
       } catch (error) {
         console.log("Hubo un error");
         console.log(error);
@@ -86,22 +83,22 @@ const resolvers = {
     },
     authUser: async (_, { input }) => {
       const { email, password } = input;
-      const userFind = await Users.findOne({ email });
-      if (!userFind) {
+      const user = await User.findOne({ email });
+      if (!user) {
         throw new Error("El usuario no existe");
       }
-      const passwordRight = await bcryptjs.compare(password, userFind.password);
-      if (!passwordRight) {
+      const passwordUser = await bcryptjs.compare(password, user.password);
+      if (!passwordUser) {
         throw new Error("Su contraseña es Incorrecta");
       }
       //crear el token
       return {
-        token: createToken(userFind, process.env.SECRET, "24h"),
+        token: generarJWT(user.id),
       };
     },
     newProduct: async (_, { input }) => {
       try {
-        const newProduct = new Products(input);
+        const newProduct = new Product(input);
         const product = await newProduct.save();
         return product;
       } catch (error) {
@@ -109,33 +106,34 @@ const resolvers = {
         console.log(error);
       }
     },
+
     updateProduct: async (_, { id, input }) => {
-      let product = await Products.findById(id);
+      let product = await Product.findById(id);
       if (!product) {
         throw new Error("Producto no Encontrado");
       }
-      product = await Products.findOneAndUpdate({ _id: id }, input, {
+      product = await Product.findOneAndUpdate({ _id: id }, input, {
         new: true,
       });
       return product;
     },
     deleteProduct: async (_, { id }) => {
       //revisar si el producto existe //chequear no esta revisando
-      let product = await Products.findById(id);
+      let product = await Product.findById(id);
       if (!product) {
         throw new Error("Producto no Encontrado");
       }
-      await Products.findOneAndDelete({ _id: id });
+      await Product.findOneAndDelete({ _id: id });
       return "Producto Eliminado";
     },
     newClient: async (_, { input }, ctx) => {
       const { email } = input;
       //verificar si el cliente esta registado
-      const client = await Clients.findOne({ email });
+      const client = await Client.findOne({ email });
       if (client) {
         throw new Error("Cliente ya esta Registrado");
       }
-      const newClient = new Clients(input);
+      const newClient = new Client(input);
       newClient.seller = ctx.user.id;
 
       try {
@@ -147,7 +145,7 @@ const resolvers = {
     },
     updateClient: async (_, { id, input }, ctx) => {
       //verificar si existe el cliente
-      let client = await Clients.findById(id);
+      let client = await Client.findById(id);
       // console.log(client);
       if (!client) {
         throw new Error("Ese cliente no existe");
@@ -157,14 +155,14 @@ const resolvers = {
         throw new Error("No tienes las credenciales");
       }
       //guardar la actualizacion del cliente
-      client = await Clients.findOneAndUpdate({ _id: id }, input, {
+      client = await Client.findOneAndUpdate({ _id: id }, input, {
         new: true,
       });
       return client;
     },
     deleteClient: async (_, { id }, ctx) => {
       //verificar si existe el cliente
-      let client = await Clients.findById(id);
+      let client = await Client.findById(id);
       // console.log(client);
       if (!client) {
         throw new Error("Ese cliente no existe");
@@ -173,9 +171,24 @@ const resolvers = {
       if (client.seller.toString() !== ctx.user.id) {
         throw new Error("No tienes las credenciales");
       }
-      client = await Clients.findOneAndDelete({ _id: id });
+      client = await Client.findOneAndDelete({ _id: id });
       return "Cliente Eliminado";
     },
+
+    newOrder: async(_,{input},ctx) =>{
+      const {client } = input;
+      //verificar si el cliente existe
+      let clientFind = await Client.findById(client);
+      // console.log(client);
+      if (!clientFind) {
+        throw new Error("Ese cliente no existe");
+      }
+
+      // verificar si el cliente es del vendedor
+      if (clientFind.seller.toString() !== ctx.user.id) {
+        throw new Error("No tienes las credenciales");
+      }
+    }
   },
 };
 
