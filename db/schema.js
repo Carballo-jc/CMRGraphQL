@@ -44,6 +44,14 @@ const typeDefs = gql`
         name: String
         price: Float
   }
+  type TopClients{
+    total:Float
+    client:[Client]
+  }
+  type TopSeller{
+    total:Float
+    seller:[User]
+  }
   #Inputs
   input UserInput {
     name: String!
@@ -75,8 +83,8 @@ const typeDefs = gql`
   }
   input OrderInput {
     order: [OrderProductInput]
-    total: Float!
-    client:ID!
+    total: Float
+    client:ID
     status:StatusOrder
   }
   enum StatusOrder {
@@ -99,6 +107,12 @@ const typeDefs = gql`
     getAllOrder:[Order]
     getOrderBySeller:[Order]
     getOrderById(id:ID!):Order
+    getOrderStatus(status:String!):[Order]
+
+    #busquedas avanzadas
+    bestClients:[TopClients]
+    bestSeller:[TopSeller]
+    getProductName(text:String!):[Product]
     
   }
 
@@ -120,6 +134,7 @@ const typeDefs = gql`
     #Order
     newOrder(input: OrderInput): Order
     updateOrder(id:ID!,input:OrderInput):Order
+    deleteOrder(id:ID!):String
   }
 
 `;

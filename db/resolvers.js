@@ -91,6 +91,64 @@ const resolvers = {
       }
       return order;
     },
+    getOrderStatus: async(_,{status},ctx) =>{
+      const order = await Order.find({seller:ctx.user.id,status});
+      return order;
+    },
+    bestClients: async () => {
+      const clients = await Order.aggregate([
+          { $match : { status : "COMPLETADO" } },
+          { $group : {
+              _id : "$client", 
+              total: { $sum: '$total' }
+          }}, 
+          {
+              $lookup: {
+                  from: 'clients', 
+                  localField: '_id',
+                  foreignField: "_id",
+                  as: "client"
+              }
+          }, 
+          {
+              $limit: 10
+          }, 
+          {
+              $sort : { total : -1 }
+          }
+      ]);
+
+      return clients;
+  }, 
+  bestSeller: async () => {
+      const sellers = await Order.aggregate([
+          { $match : { status : "COMPLETADO"} },
+          { $group : {
+              _id : "$seller", 
+              total: {$sum: '$total'}
+          }},
+          {
+              $lookup: {
+                  from: 'users', 
+                  localField: '_id',
+                  foreignField: '_id',
+                  as: 'seller'
+              }
+          }, 
+          {
+              $limit: 3
+          }, 
+          {
+              $sort: { total : -1 }
+          }
+      ]);
+
+      return sellers;
+  },
+  getProductName: async(_, { text }) => {
+      const productName = await Product.find({ $text: { $search: text  } }).limit(10)
+      return productName;
+  }
   },
   //Mutations
   Mutation: {
@@ -272,26 +330,42 @@ const resolvers = {
       }
 
            // Revisar que el stock este disponible
-           for await (const item of input.order) {
-            const { id } = item;
-    
-            const product = await Product.findById(id);
-    
-            if (item.cuantity > product.stock) {
-              throw new Error(
-                `El articulo: ${product.name} excede la cantidad disponible`
-              );
-            } else {
-              // Restar la cantidad a lo disponible
-              product.stock = product.stock - item.cuantity;
-    
-              await product.save();
+           if(input.order){
+            for await (const item of input.order) {
+              const { id } = item;
+      
+              const product = await Product.findById(id);
+      
+              if (item.cuantity > product.stock) {
+                throw new Error(
+                  `El articulo: ${product.name} excede la cantidad disponible`
+                );
+              } else {
+                // Restar la cantidad a lo disponible
+                product.stock = product.stock - item.cuantity;
+      
+                await product.save();
+              }
             }
-          }
+           }
           //guardar el pedido
           const newOrder = await Order.findByIdAndUpdate({_id:id,},input,{new:true});
           return newOrder;
     },
+    deleteOrder: async(_,{id},ctx)=>{
+      //verificar si el pedido existe
+      const order = await Order.findById(id);
+      if(!order){
+        throw new Error("Pedido no encontrado");
+      }
+      //verificar si el vendedor es quien lo borra
+      if(order.seller.toString() !== ctx.user.id){
+        throw new Error("No tienes las credenciales");
+      }
+      await order.findOneAndDelete({_id:id});
+      return 'Pedido Eliminado';
+
+    }
   },
 };
 
