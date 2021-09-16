@@ -11,7 +11,7 @@ exports.generarJWT = (id ) => {
         const payload = { id };
 
         jwt.sign( payload, SECRETKEY, {
-            expiresIn: '4h'
+            expiresIn: '5h'
         }, ( err, token ) => {
 
             if ( err ) {

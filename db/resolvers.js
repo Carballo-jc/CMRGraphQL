@@ -2,10 +2,11 @@ require("dotenv").config({ path: ".env" });
 const User = require("../models/User");
 const Product = require("../models/Product");
 const Client = require("../models/Client");
+const Order = require("../models/Order");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { generarJWT } = require("../helpers/generar-jwt");
-const {SECRETKEY} = process.env
+const { SECRETKEY } = process.env;
 
 //resolver
 const resolvers = {
@@ -57,7 +58,41 @@ const resolvers = {
         console.log(error);
       }
     },
+    //todas los pedidos
+    getAllOrder: async () => {
+      try {
+        const order = await Order.find({});
+        return order;
+      } catch (error) {
+        console.log(error);
+        console.log("Hubo un error al hacer la consulta");
+      }
+    },
+    //pedido por vendedor
+    getOrderBySeller: async (_, {}, ctx) => {
+      try {
+        const order = await Order.find({ seller: ctx.user.id });
+        return order;
+      } catch (error) {
+        console.log(error);
+        console.log("Hubo un error al hacer la consulta");
+      }
+    },
+    //pedido por ID
+    getOrderById: async (_, { id }, ctx) => {
+      const order = await Order.findById(id);
+      //verificar si el pedido existe
+      if (!order) {
+        throw new Error("Pedido no encontrado");
+      }
+      //verificar si es el vendedor correspondiente
+      if (order.seller.toString() !== ctx.user.id) {
+        throw new Error("No tienes las credenciales");
+      }
+      return order;
+    },
   },
+  //Mutations
   Mutation: {
     newUser: async (_, { input }) => {
       const { email, password } = input;
@@ -96,6 +131,7 @@ const resolvers = {
         token: generarJWT(user.id),
       };
     },
+    //seccion de productos
     newProduct: async (_, { input }) => {
       try {
         const newProduct = new Product(input);
@@ -126,6 +162,7 @@ const resolvers = {
       await Product.findOneAndDelete({ _id: id });
       return "Producto Eliminado";
     },
+    //seccion de clientes
     newClient: async (_, { input }, ctx) => {
       const { email } = input;
       //verificar si el cliente esta registado
@@ -174,21 +211,87 @@ const resolvers = {
       client = await Client.findOneAndDelete({ _id: id });
       return "Cliente Eliminado";
     },
-
-    newOrder: async(_,{input},ctx) =>{
-      const {client } = input;
+    //seccion de pedidos
+    newOrder: async (_, { input }, ctx) => {
+      const id = input.client;
       //verificar si el cliente existe
-      let clientFind = await Client.findById(client);
-      // console.log(client);
-      if (!clientFind) {
+      let client = await Client.findById(id);
+      // console.log(ctx);
+      if (!client) {
         throw new Error("Ese cliente no existe");
       }
 
       // verificar si el cliente es del vendedor
-      if (clientFind.seller.toString() !== ctx.user.id) {
+      if (client.seller.toString() !== ctx.user.id) {
         throw new Error("No tienes las credenciales");
       }
-    }
+      // Revisar que el stock este disponible
+      for await (const item of input.order) {
+        const { id } = item;
+
+        const product = await Product.findById(id);
+
+        if (item.cuantity > product.stock) {
+          throw new Error(
+            `El articulo: ${product.name} excede la cantidad disponible`
+          );
+        } else {
+          // Restar la cantidad a lo disponible
+          product.stock = product.stock - item.cuantity;
+
+          await product.save();
+        }
+      }
+
+      // Crear un nuevo pedido
+      const newOrderAdd = new Order(input);
+
+      // asignarle un vendedor
+      newOrderAdd.seller = ctx.user.id;
+
+      // Guardarlo en la base de datos
+      const result = await newOrderAdd.save();
+      return result;
+    },
+    // actualizar un pedido
+    updateOrder: async (_, { id, input }, ctx) => {
+      const { client } = input;
+      //verificar si existe la orden
+      const order = await Order.findById(id);
+      if (!order) {
+        throw new Error("Pedido no encontrado");
+      }
+      //verificar si existe el cliente
+      const clientId = await Client.findById(client);
+      if (!clientId) {
+        throw new Error("cliente no existe");
+      }
+      //verificar si el cliente y el pedido pertenecen al vendedor
+      if (clientId.seller.toString() !== ctx.user.id) {
+        throw new Error("No tienes las credenciales");
+      }
+
+           // Revisar que el stock este disponible
+           for await (const item of input.order) {
+            const { id } = item;
+    
+            const product = await Product.findById(id);
+    
+            if (item.cuantity > product.stock) {
+              throw new Error(
+                `El articulo: ${product.name} excede la cantidad disponible`
+              );
+            } else {
+              // Restar la cantidad a lo disponible
+              product.stock = product.stock - item.cuantity;
+    
+              await product.save();
+            }
+          }
+          //guardar el pedido
+          const newOrder = await Order.findByIdAndUpdate({_id:id,},input,{new:true});
+          return newOrder;
+    },
   },
 };
 

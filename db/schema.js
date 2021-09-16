@@ -84,6 +84,23 @@ const typeDefs = gql`
     COMPLETADO
     CANCELADO
   }
+    #Querys
+    type Query {
+    #user
+    getUser(token: String!): User
+    #Products
+    getProducts: [Product]
+    getProduct(id: ID!): Product
+    #clientes
+    getClients: [Client] #obtener todos los clientes
+    getClient(id: ID!): Client #obtener los clientes del user logeado
+    getClientSeller: [Client] #onbtener los clientes del vendedor
+    #Order
+    getAllOrder:[Order]
+    getOrderBySeller:[Order]
+    getOrderById(id:ID!):Order
+    
+  }
 
   #Mutation
   type Mutation {
@@ -100,20 +117,10 @@ const typeDefs = gql`
     newClient(input: ClientInput): Client
     updateClient(id: ID!, input: ClientInput): Client
     deleteClient(id: ID!): String
-    #Oder
+    #Order
     newOrder(input: OrderInput): Order
+    updateOrder(id:ID!,input:OrderInput):Order
   }
-  #Querys
-  type Query {
-    #user
-    getUser(token: String!): User
-    #Products
-    getProducts: [Product]
-    getProduct(id: ID!): Product
-    #clientes
-    getClients: [Client] #obtener todos los clientes
-    getClient(id: ID!): Client #obtener los clientes del user logeado
-    getClientSeller: [Client] #onbtener los clientes del vendedor
-  }
+
 `;
 module.exports = typeDefs;

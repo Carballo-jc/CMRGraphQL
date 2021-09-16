@@ -17,13 +17,13 @@ const server = new ApolloServer({
     const token = req.headers["authorization"] || "";
     if (token) {
       try {
-        const user = jwt.verify(token, SECRETKEY);
+        const user = jwt.verify(token.replace('Bearer ', ''), SECRETKEY);
         // console.log(user);
         return {
           user,
         };
       } catch (error) {
-        console.log("Hubo un error");
+        console.log("Hubo un error token no es valido");
         console.log(error);
       }
     }
