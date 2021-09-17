@@ -1,9 +1,10 @@
-const mongoose = require("mongoose");
 require("dotenv").config({ path: ".env" });
+const mongoose = require("mongoose");
+const {DB_MONGO}= process.env;
 
 const conecteDB = () => {
   try {
-    mongoose.connect(process.env.DB_MONGO, {
+    mongoose.connect(DB_MONGO, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       useFindAndModify: false,

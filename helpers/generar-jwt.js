@@ -4,11 +4,11 @@ const jwt = require('jsonwebtoken');
 const {SECRETKEY} = process.env
 
 
-exports.generarJWT = (id ) => {
-
+exports.generarJWT = (user ) => {
+const {id,name,lastName}=user;
     return new Promise( (resolve, reject) => {
 
-        const payload = { id };
+        const payload = {id,name,lastName};
 
         jwt.sign( payload, SECRETKEY, {
             expiresIn: '5h'

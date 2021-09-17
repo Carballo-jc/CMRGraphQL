@@ -11,9 +11,10 @@ const { SECRETKEY } = process.env;
 //resolver
 const resolvers = {
   Query: {
-    getUser: async (_, { token }) => {
-      const userId = await jwt.verify(token, SECRETKEY);
-      return userId;
+    getUser: async (_, {  },ctx) => {
+      // const userId = await jwt.verify(token, SECRETKEY);
+      // return userId;
+      return ctx.user;
     },
     getProducts: async () => {
       try {
@@ -186,7 +187,7 @@ const resolvers = {
       }
       //crear el token
       return {
-        token: generarJWT(user.id),
+        token: generarJWT(user),
       };
     },
     //seccion de productos
